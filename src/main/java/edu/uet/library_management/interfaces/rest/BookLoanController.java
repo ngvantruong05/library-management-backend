@@ -58,8 +58,12 @@ public class BookLoanController {
     }
 
     @PostMapping("/{id}/return")
-    @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<BookLoanDto> returnBook(@PathVariable Long id) {
+    public ResponseEntity<BookLoanDto> returnBook(@PathVariable Long id, Authentication authentication) {
+        BookLoanDto dto = bookLoanService.getLoanById(id);
+        boolean isAdmin = authentication.getAuthorities().stream().anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN"));
+        if (!isAdmin && !dto.getUserEmail().equals(authentication.getName())) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+        }
         return ResponseEntity.ok(bookLoanService.returnBook(id));
     }
 

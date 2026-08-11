@@ -22,3 +22,7 @@ logs/
 # Operating System Files
 .DS_Store
 Thumbs.db
+
+# Seeding files
+/src/main/resources/import_isbns.txt
+/src/main/resources/application-local.properties
