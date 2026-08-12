@@ -8,6 +8,7 @@ import edu.uet.library_management.infrastructure.persistence.FineRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.util.List;
@@ -34,6 +35,26 @@ public class FineServiceImpl implements FineService {
     }
 
     @Override
+    @Transactional
+    public FineDto submitPayment(Long fineId, String email) {
+        Fine fine = fineRepository.findById(fineId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Fine record not found with id: " + fineId));
+
+        if (!fine.getBookLoan().getUser().getEmail().equals(email)) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "You are not authorized to submit payment for this fine");
+        }
+
+        if (fine.getStatus() == FineStatus.PAID) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Fine has already been paid");
+        }
+
+        fine.setStatus(FineStatus.PENDING);
+        Fine saved = fineRepository.save(fine);
+        return toDto(saved);
+    }
+
+    @Override
+    @Transactional
     public FineDto payFine(Long fineId) {
         Fine fine = fineRepository.findById(fineId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Fine record not found with id: " + fineId));

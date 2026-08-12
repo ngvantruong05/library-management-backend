@@ -22,6 +22,11 @@ public class FineController {
         return ResponseEntity.ok(fineService.getMyFines(authentication.getName()));
     }
 
+    @PostMapping("/{id}/submit-payment")
+    public ResponseEntity<FineDto> submitPayment(@PathVariable Long id, Authentication authentication) {
+        return ResponseEntity.ok(fineService.submitPayment(id, authentication.getName()));
+    }
+
     @GetMapping
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<List<FineDto>> getAllFines() {

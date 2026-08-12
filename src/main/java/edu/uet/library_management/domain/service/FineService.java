@@ -7,5 +7,6 @@ import java.util.List;
 public interface FineService {
     List<FineDto> getMyFines(String email);
     List<FineDto> getAllFines();
+    FineDto submitPayment(Long fineId, String email);
     FineDto payFine(Long fineId);
 }
