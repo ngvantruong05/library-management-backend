@@ -51,6 +51,8 @@ public class FineServiceImpl implements FineService {
         return FineDto.builder()
                 .id(fine.getId())
                 .bookLoanId(fine.getBookLoan().getId())
+                .bookId(fine.getBookLoan().getBook().getId())
+                .bookThumbnail(fine.getBookLoan().getBook().getThumbnail())
                 .userEmail(fine.getBookLoan().getUser().getEmail())
                 .userDisplayName(fine.getBookLoan().getUser().getDisplayName())
                 .bookTitle(fine.getBookLoan().getBook().getTitle())

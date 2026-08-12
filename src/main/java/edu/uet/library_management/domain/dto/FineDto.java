@@ -15,6 +15,8 @@ import java.time.LocalDateTime;
 public class FineDto {
     private Long id;
     private Long bookLoanId;
+    private Long bookId;
+    private String bookThumbnail;
     private String userEmail;
     private String userDisplayName;
     private String bookTitle;
