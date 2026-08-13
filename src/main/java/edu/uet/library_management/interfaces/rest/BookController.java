@@ -5,6 +5,7 @@ import edu.uet.library_management.domain.dto.BookDto;
 import edu.uet.library_management.domain.service.BookService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -20,9 +21,23 @@ public class BookController {
     private final BookService bookService;
 
     @GetMapping
-    public ResponseEntity<List<BookDto>> getAllBooks() {
+    public ResponseEntity<?> getBooks(
+            @RequestParam(name = "page", required = false) Integer page,
+            @RequestParam(name = "size", required = false) Integer size,
+            @RequestParam(name = "q", required = false) String query,
+            @RequestParam(name = "categoryId", required = false) Long categoryId,
+            @RequestParam(name = "sortBy", required = false, defaultValue = "id") String sortBy,
+            @RequestParam(name = "sortDir", required = false, defaultValue = "desc") String sortDir
+    ) {
+        if (page != null || size != null || query != null || categoryId != null) {
+            int pageNum = (page != null && page >= 0) ? page : 0;
+            int sizeNum = (size != null && size > 0) ? size : 12;
+            Page<BookDto> bookPage = bookService.getBooksPaginated(pageNum, sizeNum, query, categoryId, sortBy, sortDir);
+            return ResponseEntity.ok(bookPage);
+        }
         return ResponseEntity.ok(bookService.getAllBooks());
     }
+
 
     @GetMapping("/{id}")
     public ResponseEntity<BookDto> getBookById(@PathVariable Long id) {

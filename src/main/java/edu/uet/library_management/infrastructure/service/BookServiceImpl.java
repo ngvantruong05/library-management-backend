@@ -11,6 +11,10 @@ import edu.uet.library_management.infrastructure.persistence.BookRepository;
 import edu.uet.library_management.infrastructure.persistence.CategoryRepository;
 import edu.uet.library_management.infrastructure.persistence.PublisherRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
@@ -35,6 +39,18 @@ public class BookServiceImpl implements BookService {
                 .map(this::toDto)
                 .collect(Collectors.toList());
     }
+
+    @Override
+    public Page<BookDto> getBooksPaginated(int page, int size, String query, Long categoryId, String sortBy, String sortDir) {
+        String property = (sortBy != null && !sortBy.trim().isEmpty()) ? sortBy.trim() : "id";
+        Sort.Direction direction = "asc".equalsIgnoreCase(sortDir) ? Sort.Direction.ASC : Sort.Direction.DESC;
+        Pageable pageable = PageRequest.of(page, size, Sort.by(direction, property));
+
+        String cleanQuery = (query != null && !query.trim().isEmpty()) ? query.trim() : null;
+        Page<Book> bookPage = bookRepository.searchBooksPaginated(cleanQuery, categoryId, pageable);
+        return bookPage.map(this::toDto);
+    }
+
 
     @Override
     public BookDto getBookById(Long id) {
