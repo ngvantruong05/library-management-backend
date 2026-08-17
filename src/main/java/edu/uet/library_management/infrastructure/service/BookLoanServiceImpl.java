@@ -2,7 +2,10 @@ package edu.uet.library_management.infrastructure.service;
 
 import edu.uet.library_management.domain.dto.BookLoanCreateRequest;
 import edu.uet.library_management.domain.dto.BookLoanDto;
+import edu.uet.library_management.domain.dto.DashboardStatsDto;
+import edu.uet.library_management.domain.dto.TopLentBookDto;
 import edu.uet.library_management.domain.enums.FineStatus;
+import org.springframework.data.domain.PageRequest;
 import edu.uet.library_management.domain.enums.LoanStatus;
 import edu.uet.library_management.domain.enums.LoanType;
 import edu.uet.library_management.domain.model.Book;
@@ -33,6 +36,7 @@ public class BookLoanServiceImpl implements BookLoanService {
     private final BookCopyRepository bookCopyRepository;
     private final BookCopyService bookCopyService;
     private final FineRepository fineRepository;
+    private final CategoryRepository categoryRepository;
 
     @Override
     @Transactional
@@ -182,6 +186,40 @@ public class BookLoanServiceImpl implements BookLoanService {
                 .numCopies(loan.getNumCopies())
                 .valid(loan.isValid())
                 .lastUpdated(loan.getLastUpdated())
+                .build();
+    }
+
+    @Override
+    public DashboardStatsDto getDashboardStats() {
+        long totalBooks = bookRepository.count();
+        long activeBooks = bookRepository.countByActivated(true);
+        long totalUsers = userRepository.count();
+        long totalCategories = categoryRepository.count();
+
+        // Top Lent Books
+        List<Object[]> topLentData = bookLoanRepository.findTopLentBooks(PageRequest.of(0, 10));
+        List<TopLentBookDto> topLentBooks = topLentData.stream()
+                .map(row -> TopLentBookDto.builder()
+                        .bookId((Long) row[0])
+                        .bookTitle((String) row[1])
+                        .bookThumbnail((String) row[2])
+                        .loanCount((Long) row[3])
+                        .build())
+                .collect(Collectors.toList());
+
+        // Recent Loans
+        List<BookLoanDto> recentLoans = bookLoanRepository.findByValidTrueOrderByLastUpdatedDesc(PageRequest.of(0, 10))
+                .stream()
+                .map(this::toDto)
+                .collect(Collectors.toList());
+
+        return DashboardStatsDto.builder()
+                .totalBooks(totalBooks)
+                .activeBooks(activeBooks)
+                .totalUsers(totalUsers)
+                .totalCategories(totalCategories)
+                .topLentBooks(topLentBooks)
+                .recentLoans(recentLoans)
                 .build();
     }
 }

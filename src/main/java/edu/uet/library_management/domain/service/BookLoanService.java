@@ -12,4 +12,5 @@ public interface BookLoanService {
     List<BookLoanDto> getAllLoans();
     BookLoanDto getLoanById(Long id);
     boolean refreshDatabase();
+    edu.uet.library_management.domain.dto.DashboardStatsDto getDashboardStats();
 }

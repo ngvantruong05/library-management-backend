@@ -40,5 +40,7 @@ public interface BookRepository extends JpaRepository<Book, Long> {
                         "OR LOWER(c.name) LIKE LOWER(CONCAT('%', :query, '%'))) " +
                         "AND (:categoryId IS NULL OR c.id = :categoryId)")
     Page<Book> searchBooksPaginated(@Param("query") String query, @Param("categoryId") Long categoryId, Pageable pageable);
+
+    long countByActivated(boolean activated);
 }
 
