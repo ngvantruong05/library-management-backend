@@ -6,20 +6,16 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-import java.time.LocalDateTime;
-
 @Data
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class UserDto {
-    private Long id;
-    private String email;
+public class UserUpdateRequest {
     private String displayName;
     private String birthday;
     private String phoneNumber;
     private String photoUrl;
     private Role role;
     private boolean disabled;
-    private LocalDateTime createdAt;
+    private String password; // optional password reset
 }
