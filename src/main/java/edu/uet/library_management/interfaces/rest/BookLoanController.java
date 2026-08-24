@@ -3,6 +3,7 @@ package edu.uet.library_management.interfaces.rest;
 import edu.uet.library_management.domain.dto.BookLoanCreateRequest;
 import edu.uet.library_management.domain.dto.BookLoanDto;
 import edu.uet.library_management.domain.service.BookLoanService;
+import edu.uet.library_management.domain.enums.LoanType;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -11,6 +12,7 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
 
@@ -27,8 +29,12 @@ public class BookLoanController {
         boolean isAdmin = authentication.getAuthorities().stream().anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN"));
         
         // If not admin, the user cannot borrow on behalf of another user ID
-        if (!isAdmin && request.getUserId() != null) {
-            return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+        if (!isAdmin) {
+            if (request.getUserId() != null) {
+                return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+            }
+            // Non-admin users cannot backdate or postdate their borrows
+            request.setBorrowDate(LocalDateTime.now());
         }
 
         return ResponseEntity.status(HttpStatus.CREATED).body(bookLoanService.createLoan(request, email));
@@ -61,8 +67,13 @@ public class BookLoanController {
     public ResponseEntity<BookLoanDto> returnBook(@PathVariable Long id, Authentication authentication) {
         BookLoanDto dto = bookLoanService.getLoanById(id);
         boolean isAdmin = authentication.getAuthorities().stream().anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN"));
-        if (!isAdmin && !dto.getUserEmail().equals(authentication.getName())) {
-            return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+        if (!isAdmin) {
+            if (!dto.getUserEmail().equals(authentication.getName())) {
+                return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+            }
+            if (dto.getType() == LoanType.OFFLINE) {
+                return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+            }
         }
         return ResponseEntity.ok(bookLoanService.returnBook(id));
     }
