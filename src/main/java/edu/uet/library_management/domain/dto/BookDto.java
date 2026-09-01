@@ -30,4 +30,6 @@ public class BookDto {
     private PublisherDto publisher;
     private Set<AuthorDto> authors;
     private Set<CategoryDto> categories;
+    private double averageRating;
+    private long ratingCount;
 }
