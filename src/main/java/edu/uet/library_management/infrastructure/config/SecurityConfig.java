@@ -55,7 +55,7 @@ public class SecurityConfig {
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/api/auth/**").permitAll()
-                        .requestMatchers(org.springframework.http.HttpMethod.GET, "/api/books/**", "/api/categories/**", "/api/comments/book/**").permitAll()
+                        .requestMatchers(org.springframework.http.HttpMethod.GET, "/api/books/**", "/api/categories/**", "/api/comments/book/**", "/api/ratings/**").permitAll()
                         .anyRequest().authenticated()
                 )
                 .oauth2ResourceServer(oauth2 -> oauth2

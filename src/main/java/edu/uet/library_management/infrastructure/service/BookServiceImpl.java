@@ -10,6 +10,7 @@ import edu.uet.library_management.infrastructure.persistence.AuthorRepository;
 import edu.uet.library_management.infrastructure.persistence.BookRepository;
 import edu.uet.library_management.infrastructure.persistence.CategoryRepository;
 import edu.uet.library_management.infrastructure.persistence.PublisherRepository;
+import edu.uet.library_management.infrastructure.persistence.RatingRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -19,9 +20,9 @@ import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
 
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
+import java.math.BigDecimal;
+import java.math.RoundingMode;
+import java.util.*;
 import java.util.stream.Collectors;
 
 @Service
@@ -32,23 +33,40 @@ public class BookServiceImpl implements BookService {
     private final PublisherRepository publisherRepository;
     private final AuthorRepository authorRepository;
     private final CategoryRepository categoryRepository;
+    private final RatingRepository ratingRepository;
 
     @Override
     public List<BookDto> getAllBooks() {
-        return bookRepository.findAll().stream()
-                .map(this::toDto)
+        List<Book> books = bookRepository.findAll();
+        List<Long> bookIds = books.stream().map(Book::getId).collect(Collectors.toList());
+        Map<Long, RatingStat> statsMap = loadRatingStatsForBooks(bookIds);
+        return books.stream()
+                .map(b -> toDtoWithStats(b, statsMap))
                 .collect(Collectors.toList());
     }
 
     @Override
     public Page<BookDto> getBooksPaginated(int page, int size, String query, Long categoryId, String sortBy, String sortDir) {
-        String property = (sortBy != null && !sortBy.trim().isEmpty()) ? sortBy.trim() : "id";
-        Sort.Direction direction = "asc".equalsIgnoreCase(sortDir) ? Sort.Direction.ASC : Sort.Direction.DESC;
-        Pageable pageable = PageRequest.of(page, size, Sort.by(direction, property));
-
         String cleanQuery = (query != null && !query.trim().isEmpty()) ? query.trim() : null;
-        Page<Book> bookPage = bookRepository.searchBooksPaginated(cleanQuery, categoryId, pageable);
-        return bookPage.map(this::toDto);
+        Page<Book> bookPage;
+
+        if ("rating".equalsIgnoreCase(sortBy) || "averageRating".equalsIgnoreCase(sortBy)) {
+            Pageable pageable = PageRequest.of(page, size);
+            if ("asc".equalsIgnoreCase(sortDir)) {
+                bookPage = bookRepository.searchBooksOrderByRatingAsc(cleanQuery, categoryId, pageable);
+            } else {
+                bookPage = bookRepository.searchBooksOrderByRatingDesc(cleanQuery, categoryId, pageable);
+            }
+        } else {
+            String property = (sortBy != null && !sortBy.trim().isEmpty()) ? sortBy.trim() : "id";
+            Sort.Direction direction = "asc".equalsIgnoreCase(sortDir) ? Sort.Direction.ASC : Sort.Direction.DESC;
+            Pageable pageable = PageRequest.of(page, size, Sort.by(direction, property));
+            bookPage = bookRepository.searchBooksPaginated(cleanQuery, categoryId, pageable);
+        }
+
+        List<Long> bookIds = bookPage.getContent().stream().map(Book::getId).collect(Collectors.toList());
+        Map<Long, RatingStat> statsMap = loadRatingStatsForBooks(bookIds);
+        return bookPage.map(b -> toDtoWithStats(b, statsMap));
     }
 
 
@@ -174,6 +192,43 @@ public class BookServiceImpl implements BookService {
     }
 
     private BookDto toDto(Book book) {
+        Double avg = ratingRepository.getAverageRatingByBookId(book.getId());
+        double averageRating = 0.0;
+        if (avg != null) {
+            averageRating = BigDecimal.valueOf(avg).setScale(1, RoundingMode.HALF_UP).doubleValue();
+        }
+        Long count = ratingRepository.countByBookId(book.getId());
+        long ratingCount = count != null ? count : 0L;
+        return toDto(book, averageRating, ratingCount);
+    }
+
+    private BookDto toDtoWithStats(Book book, Map<Long, RatingStat> statsMap) {
+        RatingStat stat = statsMap != null ? statsMap.get(book.getId()) : null;
+        double avg = stat != null ? stat.average : 0.0;
+        long count = stat != null ? stat.count : 0L;
+        return toDto(book, avg, count);
+    }
+
+    private Map<Long, RatingStat> loadRatingStatsForBooks(Collection<Long> bookIds) {
+        if (bookIds == null || bookIds.isEmpty()) {
+            return Collections.emptyMap();
+        }
+        List<Object[]> rows = ratingRepository.getRatingStatsForBookIds(bookIds);
+        Map<Long, RatingStat> map = new HashMap<>();
+        for (Object[] row : rows) {
+            if (row != null && row.length >= 3 && row[0] != null) {
+                Long bId = ((Number) row[0]).longValue();
+                Double avg = row[1] != null
+                        ? BigDecimal.valueOf(((Number) row[1]).doubleValue()).setScale(1, RoundingMode.HALF_UP).doubleValue()
+                        : 0.0;
+                Long count = row[2] != null ? ((Number) row[2]).longValue() : 0L;
+                map.put(bId, new RatingStat(avg, count));
+            }
+        }
+        return map;
+    }
+
+    private BookDto toDto(Book book, double averageRating, long ratingCount) {
         PublisherDto pubDto = null;
         if (book.getPublisher() != null) {
             pubDto = PublisherDto.builder()
@@ -223,6 +278,18 @@ public class BookServiceImpl implements BookService {
                 .publisher(pubDto)
                 .authors(authorDtos)
                 .categories(categoryDtos)
+                .averageRating(averageRating)
+                .ratingCount(ratingCount)
                 .build();
+    }
+
+    private static class RatingStat {
+        final double average;
+        final long count;
+
+        RatingStat(double average, long count) {
+            this.average = average;
+            this.count = count;
+        }
     }
 }
