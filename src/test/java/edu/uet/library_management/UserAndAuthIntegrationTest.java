@@ -15,6 +15,7 @@ import edu.uet.library_management.infrastructure.persistence.BookCopyRepository;
 import edu.uet.library_management.infrastructure.persistence.BookLoanRepository;
 import edu.uet.library_management.infrastructure.persistence.BookRepository;
 import edu.uet.library_management.infrastructure.persistence.FineRepository;
+import edu.uet.library_management.infrastructure.persistence.RatingRepository;
 import edu.uet.library_management.infrastructure.persistence.UserRepository;
 import edu.uet.library_management.infrastructure.security.JwtService;
 import edu.uet.library_management.interfaces.rest.AuthController.PasswordUpdateRequest;
@@ -64,6 +65,9 @@ public class UserAndAuthIntegrationTest {
     private FineRepository fineRepository;
 
     @Autowired
+    private RatingRepository ratingRepository;
+
+    @Autowired
     private PasswordEncoder passwordEncoder;
 
     @Autowired
@@ -83,6 +87,7 @@ public class UserAndAuthIntegrationTest {
     @BeforeEach
     void setUp() {
         // Xoá dữ liệu cũ theo đúng thứ tự ràng buộc khóa ngoại
+        ratingRepository.deleteAll();
         fineRepository.deleteAll();
         bookLoanRepository.deleteAll();
         bookCopyRepository.deleteAll();
