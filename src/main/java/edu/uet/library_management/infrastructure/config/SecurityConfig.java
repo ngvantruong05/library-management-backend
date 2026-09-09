@@ -44,7 +44,7 @@ public class SecurityConfig {
 
     private final CustomUserDetailsService userDetailsService;
 
-    @Value("${secret.key:8c4d330fb8974a6c474bfe59468693ff5c16f8e677aff10cd1b129b9d910196a}")
+    @Value("${secret.key}")
     private String jwtKey;
 
     @Bean
