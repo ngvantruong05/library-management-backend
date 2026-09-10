@@ -212,12 +212,26 @@ public class AuthController {
         User user = userRepository.findByEmail(email)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found"));
         
-        user.setDisplayName(request.getDisplayName());
-        user.setBirthday(request.getBirthday());
-        user.setPhoneNumber(request.getPhoneNumber());
-        user.setPhotoUrl(request.getPhotoUrl());
+        if (request.getDisplayName() != null) {
+            user.setDisplayName(request.getDisplayName());
+        }
+        if (request.getBirthday() != null) {
+            user.setBirthday(request.getBirthday());
+        }
+        if (request.getPhoneNumber() != null) {
+            user.setPhoneNumber(request.getPhoneNumber());
+        }
+        if (request.getPhotoUrl() != null) {
+            user.setPhotoUrl(request.getPhotoUrl());
+        }
         
-        userRepository.save(user);
+        try {
+            userRepository.save(user);
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of(
+                "message", "Không thể lưu dữ liệu vào CSDL. Cột photo_url trong Database hiện tại có thể đang bị giới hạn 255 ký tự. Vui lòng chạy lệnh SQL trên Database: ALTER TABLE users ALTER COLUMN photo_url TYPE TEXT; Lỗi chi tiết: " + e.getMessage()
+            ));
+        }
         
         UserDto userDto = UserDto.builder()
                 .id(user.getId())
@@ -230,6 +244,40 @@ public class AuthController {
                 .createdAt(user.getCreatedAt())
                 .build();
                 
+        return ResponseEntity.ok(userDto);
+    }
+
+    @PutMapping("/me/avatar")
+    public ResponseEntity<?> updateAvatar(@RequestBody Map<String, String> body, Authentication authentication) {
+        if (authentication == null || !authentication.isAuthenticated()) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("message", "Unauthorized"));
+        }
+        String email = authentication.getName();
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found"));
+
+        String photoUrl = body != null ? body.get("photoUrl") : null;
+        user.setPhotoUrl(photoUrl != null ? photoUrl : "");
+
+        try {
+            userRepository.save(user);
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Map.of(
+                "message", "Lỗi CSDL khi lưu avatar: " + e.getMessage()
+            ));
+        }
+
+        UserDto userDto = UserDto.builder()
+                .id(user.getId())
+                .email(user.getEmail())
+                .displayName(user.getDisplayName())
+                .birthday(user.getBirthday())
+                .phoneNumber(user.getPhoneNumber())
+                .photoUrl(user.getPhotoUrl())
+                .role(user.getRole())
+                .createdAt(user.getCreatedAt())
+                .build();
+
         return ResponseEntity.ok(userDto);
     }
 

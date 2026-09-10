@@ -36,12 +36,19 @@ public class DataInitializer implements CommandLineRunner {
     private final BookLoanRepository bookLoanRepository;
     private final FineRepository fineRepository;
     private final PasswordEncoder passwordEncoder;
+    private final org.springframework.jdbc.core.JdbcTemplate jdbcTemplate;
 
     @Value("${google.books.api.key:}")
     private String googleBooksApiKey;
 
     @Override
     public void run(String... args) throws Exception {
+        try { jdbcTemplate.execute("ALTER TABLE users ALTER COLUMN photo_url TYPE TEXT"); } catch (Exception e) { log.debug("PostgreSQL alter: {}", e.getMessage()); }
+        try { jdbcTemplate.execute("ALTER TABLE users MODIFY COLUMN photo_url TEXT"); } catch (Exception e) { log.debug("MySQL alter: {}", e.getMessage()); }
+        try { jdbcTemplate.execute("ALTER TABLE users MODIFY photo_url TEXT"); } catch (Exception e) { log.debug("MySQL alt alter: {}", e.getMessage()); }
+        try { jdbcTemplate.execute("ALTER TABLE users ALTER COLUMN photo_url SET DATA TYPE TEXT"); } catch (Exception e) { log.debug("H2 alter: {}", e.getMessage()); }
+        log.info("Ensured users.photo_url column type is TEXT across database dialects.");
+
         File isbnFile = new File("src/main/resources/import_isbns.txt");
         if (!isbnFile.exists() || isbnFile.length() == 0) {
             return;
