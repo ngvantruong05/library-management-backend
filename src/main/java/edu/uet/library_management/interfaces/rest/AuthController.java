@@ -97,7 +97,56 @@ public class AuthController {
 
             return ResponseEntity.ok(authResponse);
         } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("message", "Invalid email or password"));
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("message", "Email hoặc mật khẩu không chính xác"));
+        }
+    }
+
+    @PostMapping("/google")
+    public ResponseEntity<?> googleLogin(@Valid @RequestBody GoogleAuthRequest request) {
+        try {
+            User user = userRepository.findByEmail(request.getEmail())
+                    .orElseGet(() -> {
+                        Role role = (userRepository.count() == 0) ? Role.ADMIN : Role.USER;
+                        String name = (request.getDisplayName() != null && !request.getDisplayName().isBlank()) 
+                                ? request.getDisplayName() 
+                                : request.getEmail().split("@")[0];
+                        User newUser = User.builder()
+                                .email(request.getEmail())
+                                .password(passwordEncoder.encode(java.util.UUID.randomUUID().toString()))
+                                .displayName(name)
+                                .photoUrl(request.getPhotoUrl())
+                                .role(role)
+                                .disabled(false)
+                                .build();
+                        return userRepository.save(newUser);
+                    });
+
+            if (user.isDisabled()) {
+                return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                        .body(Map.of("message", "Tài khoản của bạn đã bị khóa"));
+            }
+
+            if (request.getPhotoUrl() != null && !request.getPhotoUrl().isBlank() && (user.getPhotoUrl() == null || user.getPhotoUrl().isBlank())) {
+                user.setPhotoUrl(request.getPhotoUrl());
+                userRepository.save(user);
+            }
+
+            String accessToken = jwtService.generateAccessToken(user);
+            String refreshToken = jwtService.generateRefreshToken(user);
+
+            AuthResponse authResponse = AuthResponse.builder()
+                    .accessToken(accessToken)
+                    .refreshToken(refreshToken)
+                    .accessTokenExpiresIn(accessTokenExpiration)
+                    .email(user.getEmail())
+                    .displayName(user.getDisplayName())
+                    .role(user.getRole())
+                    .build();
+
+            return ResponseEntity.ok(authResponse);
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of("message", "Đăng nhập Google thất bại: " + e.getMessage()));
         }
     }
 
