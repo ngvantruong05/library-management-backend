@@ -9,7 +9,9 @@ import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 @Service
@@ -20,8 +22,10 @@ public class CategoryServiceImpl implements CategoryService {
 
     @Override
     public List<CategoryDto> getAllCategories() {
-        return categoryRepository.findAll().stream()
-                .map(this::toDto)
+        List<Category> categories = categoryRepository.findAll();
+        Map<Long, Long> countsMap = loadCategoryBookCounts();
+        return categories.stream()
+                .map(c -> toDto(c, countsMap.getOrDefault(c.getId(), 0L)))
                 .collect(Collectors.toList());
     }
 
@@ -29,7 +33,8 @@ public class CategoryServiceImpl implements CategoryService {
     public CategoryDto getCategoryById(Long id) {
         Category category = categoryRepository.findById(id)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Category not found with id: " + id));
-        return toDto(category);
+        Long count = categoryRepository.countBooksByCategoryId(id);
+        return toDto(category, count != null ? count : 0L);
     }
 
     @Override
@@ -41,7 +46,7 @@ public class CategoryServiceImpl implements CategoryService {
                 .name(categoryDto.getName())
                 .build();
         Category savedCategory = categoryRepository.save(category);
-        return toDto(savedCategory);
+        return toDto(savedCategory, 0L);
     }
 
     @Override
@@ -55,7 +60,8 @@ public class CategoryServiceImpl implements CategoryService {
 
         category.setName(categoryDto.getName());
         Category updatedCategory = categoryRepository.save(category);
-        return toDto(updatedCategory);
+        Long count = categoryRepository.countBooksByCategoryId(id);
+        return toDto(updatedCategory, count != null ? count : 0L);
     }
 
     @Override
@@ -65,10 +71,24 @@ public class CategoryServiceImpl implements CategoryService {
         categoryRepository.delete(category);
     }
 
-    private CategoryDto toDto(Category category) {
+    private Map<Long, Long> loadCategoryBookCounts() {
+        List<Object[]> rows = categoryRepository.countBooksPerCategory();
+        Map<Long, Long> map = new HashMap<>();
+        for (Object[] row : rows) {
+            if (row != null && row.length >= 2 && row[0] != null) {
+                Long catId = ((Number) row[0]).longValue();
+                Long count = row[1] != null ? ((Number) row[1]).longValue() : 0L;
+                map.put(catId, count);
+            }
+        }
+        return map;
+    }
+
+    private CategoryDto toDto(Category category, Long bookCount) {
         return CategoryDto.builder()
                 .id(category.getId())
                 .name(category.getName())
+                .bookCount(bookCount)
                 .build();
     }
 }
