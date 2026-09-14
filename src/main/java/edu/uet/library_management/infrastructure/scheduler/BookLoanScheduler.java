@@ -15,8 +15,8 @@ public class BookLoanScheduler {
     private final BookLoanService bookLoanService;
     private final NotificationService notificationService;
 
-    // Run automatically every 5 minutes (300,000 milliseconds)
-    @Scheduled(fixedRate = 300000)
+    // Run automatically every day at 00:00 (midnight)
+    @Scheduled(cron = "0 0 0 * * *")
     public void autoRefreshLoans() {
         log.info("[Scheduler] Starting automatic refresh of book loans status...");
         try {
