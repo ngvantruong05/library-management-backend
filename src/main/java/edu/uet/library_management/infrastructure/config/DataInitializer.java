@@ -162,6 +162,14 @@ public class DataInitializer implements CommandLineRunner {
                 Map<String, String> imageLinks = (Map<String, String>) volumeInfo.get("imageLinks");
                 if (imageLinks != null) {
                     thumbnail = imageLinks.get("thumbnail");
+                    if (thumbnail == null || thumbnail.isEmpty()) {
+                        thumbnail = imageLinks.get("smallThumbnail");
+                    }
+                    if (thumbnail != null) {
+                        thumbnail = thumbnail.replace("http://", "https://");
+                    } else {
+                        thumbnail = "";
+                    }
                 }
             }
 

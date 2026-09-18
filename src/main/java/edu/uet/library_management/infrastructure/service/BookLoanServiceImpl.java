@@ -178,6 +178,8 @@ public class BookLoanServiceImpl implements BookLoanService {
                 .bookId(loan.getBook().getId())
                 .bookTitle(loan.getBook().getTitle())
                 .bookThumbnail(loan.getBook().getThumbnail())
+                .bookPdfLink(loan.getBook().getPdfLink())
+                .bookIsbn(loan.getBook().getIsbn())
                 .borrowDate(loan.getBorrowDate())
                 .dueDate(loan.getDueDate())
                 .returnDate(loan.getReturnDate())

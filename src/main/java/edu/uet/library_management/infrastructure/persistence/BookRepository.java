@@ -1,6 +1,7 @@
 package edu.uet.library_management.infrastructure.persistence;
 
 import edu.uet.library_management.domain.model.Book;
+import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -13,6 +14,10 @@ import java.util.Optional;
 
 @Repository
 public interface BookRepository extends JpaRepository<Book, Long> {
+    @Override
+    @EntityGraph(attributePaths = {"publisher", "authors", "categories"})
+    List<Book> findAll();
+
     Optional<Book> findByIsbn(String isbn);
     boolean existsByIsbn(String isbn);
 

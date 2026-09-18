@@ -21,6 +21,8 @@ public class BookLoanDto {
     private Long bookId;
     private String bookTitle;
     private String bookThumbnail;
+    private String bookPdfLink;
+    private String bookIsbn;
     private LocalDateTime borrowDate;
     private LocalDateTime dueDate;
     private LocalDateTime returnDate;
