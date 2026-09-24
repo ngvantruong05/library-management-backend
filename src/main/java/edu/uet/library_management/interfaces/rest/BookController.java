@@ -27,15 +27,16 @@ public class BookController {
             @RequestParam(name = "q", required = false) String query,
             @RequestParam(name = "categoryId", required = false) Long categoryId,
             @RequestParam(name = "sortBy", required = false, defaultValue = "id") String sortBy,
-            @RequestParam(name = "sortDir", required = false, defaultValue = "desc") String sortDir
+            @RequestParam(name = "sortDir", required = false, defaultValue = "desc") String sortDir,
+            @RequestParam(name = "active", required = false) Boolean active
     ) {
         if (page != null || size != null || query != null || categoryId != null) {
             int pageNum = (page != null && page >= 0) ? page : 0;
             int sizeNum = (size != null && size > 0) ? size : 12;
-            Page<BookDto> bookPage = bookService.getBooksPaginated(pageNum, sizeNum, query, categoryId, sortBy, sortDir);
+            Page<BookDto> bookPage = bookService.getBooksPaginated(pageNum, sizeNum, query, categoryId, sortBy, sortDir, active);
             return ResponseEntity.ok(bookPage);
         }
-        return ResponseEntity.ok(bookService.getAllBooks());
+        return ResponseEntity.ok(bookService.getAllBooks(active));
     }
 
 
@@ -65,6 +66,13 @@ public class BookController {
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<Void> deleteBook(@PathVariable Long id) {
         bookService.deleteBook(id);
+        return ResponseEntity.noContent().build();
+    }
+
+    @PatchMapping("/{id}/activate")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<Void> activateBook(@PathVariable Long id) {
+        bookService.activateBook(id);
         return ResponseEntity.noContent().build();
     }
 }

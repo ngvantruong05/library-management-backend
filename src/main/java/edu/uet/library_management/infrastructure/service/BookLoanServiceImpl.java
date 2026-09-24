@@ -54,6 +54,10 @@ public class BookLoanServiceImpl implements BookLoanService {
         Book book = bookRepository.findById(request.getBookId())
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Book not found with id: " + request.getBookId()));
 
+        if (!book.isActivated()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "This book has been deactivated and is not available for borrowing");
+        }
+
         if (request.getType() == LoanType.OFFLINE) {
             if (request.getNumCopies() <= 0) {
                 throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Number of copies must be greater than 0 for OFFLINE borrowing");

@@ -37,7 +37,17 @@ public class BookServiceImpl implements BookService {
 
     @Override
     public List<BookDto> getAllBooks() {
-        List<Book> books = bookRepository.findAll();
+        return getAllBooks(null);
+    }
+
+    @Override
+    public List<BookDto> getAllBooks(Boolean active) {
+        List<Book> books;
+        if (active != null) {
+            books = bookRepository.findByActivated(active);
+        } else {
+            books = bookRepository.findAll();
+        }
         List<Long> bookIds = books.stream().map(Book::getId).collect(Collectors.toList());
         Map<Long, RatingStat> statsMap = loadRatingStatsForBooks(bookIds);
         return books.stream()
@@ -47,21 +57,26 @@ public class BookServiceImpl implements BookService {
 
     @Override
     public Page<BookDto> getBooksPaginated(int page, int size, String query, Long categoryId, String sortBy, String sortDir) {
+        return getBooksPaginated(page, size, query, categoryId, sortBy, sortDir, null);
+    }
+
+    @Override
+    public Page<BookDto> getBooksPaginated(int page, int size, String query, Long categoryId, String sortBy, String sortDir, Boolean active) {
         String cleanQuery = (query != null && !query.trim().isEmpty()) ? query.trim() : null;
         Page<Book> bookPage;
 
         if ("rating".equalsIgnoreCase(sortBy) || "averageRating".equalsIgnoreCase(sortBy)) {
             Pageable pageable = PageRequest.of(page, size);
             if ("asc".equalsIgnoreCase(sortDir)) {
-                bookPage = bookRepository.searchBooksOrderByRatingAsc(cleanQuery, categoryId, pageable);
+                bookPage = bookRepository.searchBooksOrderByRatingAsc(cleanQuery, categoryId, active, pageable);
             } else {
-                bookPage = bookRepository.searchBooksOrderByRatingDesc(cleanQuery, categoryId, pageable);
+                bookPage = bookRepository.searchBooksOrderByRatingDesc(cleanQuery, categoryId, active, pageable);
             }
         } else {
             String property = (sortBy != null && !sortBy.trim().isEmpty()) ? sortBy.trim() : "id";
             Sort.Direction direction = "asc".equalsIgnoreCase(sortDir) ? Sort.Direction.ASC : Sort.Direction.DESC;
             Pageable pageable = PageRequest.of(page, size, Sort.by(direction, property));
-            bookPage = bookRepository.searchBooksPaginated(cleanQuery, categoryId, pageable);
+            bookPage = bookRepository.searchBooksPaginated(cleanQuery, categoryId, active, pageable);
         }
 
         List<Long> bookIds = bookPage.getContent().stream().map(Book::getId).collect(Collectors.toList());
@@ -188,7 +203,16 @@ public class BookServiceImpl implements BookService {
     public void deleteBook(Long id) {
         Book book = bookRepository.findById(id)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Book not found with id: " + id));
-        bookRepository.delete(book);
+        book.setActivated(false);
+        bookRepository.save(book);
+    }
+
+    @Override
+    public void activateBook(Long id) {
+        Book book = bookRepository.findById(id)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Book not found with id: " + id));
+        book.setActivated(true);
+        bookRepository.save(book);
     }
 
     private BookDto toDto(Book book) {
